@@ -1,6 +1,6 @@
 <?php
 include ('dbaccess.php');
-public Class GenresController
+Class GenresController
 {
 	public function GETAction($request) {
             $db = $db = DbAccess::getInstance();
@@ -23,7 +23,7 @@ public Class GenresController
         return $query->fetchAll();
     else
     {
-         header('HTTP/1.0 204 No Result Found');
+        header('HTTP/1.0 204 No Result Found');
         return;
     }
     
@@ -47,12 +47,15 @@ public function DeleteAction($request)
 public function PostAction($request)
 {
      $db = $db = DbAccess::getInstance();
-  return $db->insertupdate('Genre','Id', array('Name','Descripition'), $request->parameters);
+  return $db->insertupdate('Genre','Id', array('Name','Description'), $request->parameters);
 }
     public function PutAction($request)
 {
+    if(isset($request->url_elements[2]) && is_numeric($request->url_elements[2]))
+    {
      $db = $db = DbAccess::getInstance();
-    return $db->insertupdate('Genre','Id', array('Name','Description'), $request->parameters);
+     return $db->insertupdate('Genre','Id', array('Name','Description'), $request->parameters);
+    }
 }
 
 }

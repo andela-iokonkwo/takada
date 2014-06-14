@@ -1,6 +1,6 @@
 <?php
 include ('dbaccess.php');
-public Class TagsController
+ Class TagsController
 {
 	public function GETAction($request) {
             $db = $db = DbAccess::getInstance();
@@ -46,8 +46,11 @@ public function DeleteAction($request)
 }
 public function PostAction($request)
 {
+    if(isset($request->url_elements[2]) && is_numeric($request->url_elements[2]))
+    {
      $db = $db = DbAccess::getInstance();
-  return $db->insertupdate('Tags','Id', array('Name','Descripition'), $request->parameters);
+     return $db->insertupdate('Tags','Id', array('Name','Description'), $request->parameters);
+    }
 }
     public function PutAction($request)
 {

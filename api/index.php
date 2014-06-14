@@ -13,6 +13,8 @@ $request->url_elements = array();
 if(isset($_SERVER['PATH_INFO'])) {
     $request->url_elements = explode('/', $_SERVER['PATH_INFO']);
 }
+//print_r($request->url_elements);
+
 // figure out the verb and grab the incoming data
 $request->verb = $_SERVER['REQUEST_METHOD'];
 switch($request->verb) {
