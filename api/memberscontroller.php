@@ -3,14 +3,80 @@ session_start();
 Class MembersController
 {
     public function GetAction($request) {
-        $db = DbAccess::getInstance();
-               
+        if(this->Authenticate()){
+            $db = DbAccess::getInstance();
+            try{
+                if(isset($request->url_elements[2]) && isset($request->url_elements[3]) && $request->url_elements[2]=='search'){
+                    //members/search/:name?skip?take?
+
+
+
+                }
+                elseif(isset($request->url_elements[2]) && is_numeric($request-url_elements[2])){
+                    //members/:id
+                    $query = $db->query('select * from Users where Id= :Id',array('Id'=> $request->url_elements[2]));  
+
+                }
+                elseif(isset($request->url_elements[2] && $request->url_elements[2] == 'me')){
+                    //members/me
+                    $request_headers = apache_request_headers();
+
+                    $me = array();
+                    $query = $db->query('select * from Activity where UserId= :Id',array('Id'=> $request_headers['User-Id']);  
+                    $result = $query->fetchAll();              
+                    $me['Me-activity'] = $result;
+                    $query = $db->query('select * from Activity where UserId IN (select UserId from Follow where FollowerId = :id)',array('id'=>                                   $request_headers['User-Id']);  
+                    $result = $query->fetchAll();
+                    $me['All-activity'] = $result;
+                    $query = $db->query('select g.Id, g.Name, g.Description (select group_concat(t.Name) From Tags t where t.Id IN 
+                    (select TagId From TagsInGroup tg where tg.GroupId = g.Id ) as Tags from Groups g join UsersInGroup ug  on (g.id = ug.GroupId) where                            ug.UserId = :id)',array('id'=> $request_headers['User-Id']);  
+                    $me['Groups'] = $query->fetchAll();
+                    $query = $db->query('select Name from Users where Id = :id',array('id'=>$request_headers['User-Id']); 
+                    $me['Name'] = $query->fetchAll()[0]['Name'];
+                    $query = $db->query('select b.Title, b.CoverArt from Books b  where b.Id IN (select ub.BookId from UsersBook ub where ub.UserId =                             :id)',array('id'=> $request_headers['User-Id']);
+                    $me['Books'] = $query->fetchAll();                                         
+                    return $me;
+
+                }
+                elseif(isset($request->url_elements[2] && $request->url_elements[2]=='mostactive')){
+                    //members/mostactive
+
+                }
+                elseif(isset($request->url_elements[2] && $request->url_elements[2]== 'featured')){
+                    //members/featured
+
+                }
+                elseif(!isset($request->url_elements[2])){
+                    //members?skip=? & take=?
+                    //or
+                    //members/likeyou?books=?&groups=?&interest=?&take=?&skip=?
+
+                }
+                if(!isset($query))
+                {
+                    header('HTTP/1.0 404 Url Not Found');
+                    return;
+                }
+                if($query->rowCount() > 0 )
+                    return $query->fetchAll();
+                else
+                {
+                    header('HTTP/1.0 204 No Result Found');
+                    return;
+                }
+
+            }
+            catch(PDOException $e){
+                header('HTTP/1.0 500 Url Server Error');
+                return;
+            }
+        }
     }
-	
+
 
     public function PostAction($request)
     {
-       
+
         if(isset($request->url_elements[2]) && $request->url_elements[2] == 'login')
         {
             return $this->GetToken($request->parameters);
@@ -23,7 +89,7 @@ Class MembersController
         elseif(isset($request->url_elements[2]) && $request->url_elements[3] == 'logout')
         {
             session_destroy();
-           // $db = DbAccess::getInstance();
+            // $db = DbAccess::getInstance();
             //return $db->insertupdate('user','Id', array('Token','Expires') , array('Token' => '', 'Expires' => 0, 'Id' => $request->url_elements[2] )); 
         }
         elseif(isset($request->url_elements[2]) && $request->url_elements[2] == 'changepassword')
@@ -35,25 +101,25 @@ Class MembersController
 
     public function DeleteAction($request) 
     {
-    if($this->Authenticate()){
-       
-      }
+        if($this->Authenticate()){
+
+        }
     }
 
     public function PutAction($request)
     {
-      if($this->Authenticate()){
-        $db = $db = DbAccess::getInstance();
-        $Id = $db->insertupdate('Users','Id', array('Name','Location', 'Email', 'State', 'About', 'Loves', 'Hates', 'F-Music','F-Authors', 'F-Movies', 'F-Books', 'F-Quotes'), $request->parameters);
-        return $Id;
-       }        
+        if($this->Authenticate()){
+            $db = $db = DbAccess::getInstance();
+            $Id = $db->insertupdate('Users','Id', array('Name','Location', 'Email', 'State', 'About', 'Loves', 'Hates', 'F-Music','F-Authors', 'F-Movies', 'F-Books', 'F-Quotes'), $request->parameters);
+            return $Id;
+        }        
     }
 
     function GetToken($parameters)
     {
         if(!$parameters['Email'])
             return;
-        
+
         $db = DbAccess::getInstance();
         $query = $db->query('select Id, Password, Salt, Name from Users where Email= :email', array('email'=> $parameters['Email']));
         if(!$query->rowCount() > 0 )
@@ -65,7 +131,7 @@ Class MembersController
             return;
         $tokenSalt = bin2hex(rand(5555, 12457897654));
         $token = hash_hmac('SHA256', $hashedPassword, $tokenSalt);
-       
+
         $mem = array('token' => $token, 'Name' => $result[0]['Name'], 'Id' => $result[0]['Id']);
         $_SESSION['token'] = $token;
         return $mem;
@@ -73,7 +139,7 @@ Class MembersController
 
     function AddAccount($parameters)
     {
-     // return $parameters;
+        // return $parameters;
         $salt = rand();
         $parameters['Salt'] = $salt;
         //$password = hash('SHA256', $parameters['Password']);
@@ -89,24 +155,24 @@ Class MembersController
         if ( ! isset($request_headers['Auth-Token'])) {
             return false;
         }
-     
-     if(!isset($_SESSION['token'])){
-        header('HTTP/1.0 401 Login Required');
-        return false;
+
+        if(!isset($_SESSION['token'])){
+            header('HTTP/1.0 401 Login Required');
+            return false;
         }
         return $_SESSION['token'] === $request_headers['Auth-Token'];
     }
 
     function ChangePassword($parameters)
     {
+        if($this->Authenticate())
+        {
         $db = DbAccess::getInstance();
-        $Id = Authenticate();
+        //$Id = Authenticate();
         $query = $db->query('select Id, Salt from Users where Email= :email', array('email'=> $parameters['Email']));
         if(!$query->rowCount() > 0 )
             return;
         $result = $query->fetchAll();
-        if($Id)
-        {
             $dbPassword = hash_hmac('SHA256', $parameters['NewPassword'] , $result[0]['Salt']);
             $parameters = array();
             $parameters['Password'] = $dbPassword;
