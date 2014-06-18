@@ -8,7 +8,7 @@ Class GenresController
     if(isset($request->url_elements[2]) && is_numeric($request->url_elements[2]))
     {
 
-          $query = $db->query('select * from Genre where Id = :Id',array('Id' => $request->url_elements[2]));
+          $query = $db->query('select * from Genre where Id = :Id limit :skip :take',array('Id' => $request->url_elements[2], 'skip' => $request->parameter['skip']));
     } 
    else if(!isset($request->url_elements[2]))
     {
