@@ -3,54 +3,74 @@ session_start();
 Class MembersController
 {
     public function GetAction($request) {
-        if(this->Authenticate()){
+        if($this->Authenticate()){
             $db = DbAccess::getInstance();
             try{
-                if(isset($request->url_elements[2]) && isset($request->url_elements[3]) && $request->url_elements[2]=='search'){
+                if(isset($request->url_elements[2]) && $request->url_elements[2]=='search' && isset($request->url_elements[2])){
                     //members/search/:name?skip?take?
-
-
-
+                    $query = $db->query("select Id, Name from Users u where u.Name Like ':name' limit :skip :take",
+                        array('name'=> $request->url_elements[3], 'skip'=> $request->url_parameters['skip'], 'take'=> $request->url_parameters['take']));
+                    return $query->fetchAll();
                 }
-                elseif(isset($request->url_elements[2]) && is_numeric($request-url_elements[2])){
+                else if(isset($request->url_elements[2]) && is_numeric($request->url_elements[2])){
                     //members/:id
-                    $query = $db->query('select * from Users where Id= :Id',array('Id'=> $request->url_elements[2]));  
+                    $result = array();
+                    $query = $db->query('select * from Users where Id= :Id',array('Id'=> $request->url_elements[2]));
+                    $r = $query->fetchAll()[0];
+                    unset($r[0]['Salt']);
+                    $result['profile'] = $r;
 
+                    $query = $db->query('select (count(*) * 2) as Count from CommentsInPost cp Join Posts p on (p.Id = cp.PostId) where p.UserId = :Id',array('Id'=> $request->url_elements[2]));
+                    $result['posts_comments'] = $query->fetchAll()[0];
+
+                    $query = $db->query('select (count(*) * 3) as Count, sum(c.Likes) as Likes from Comments c  where c.UserId = :Id',array('Id'=> $request->url_elements[2]));
+                    $result['users_comments'] = $query->fetchAll()[0];
+
+                    $query = $db->query('select (count(*) * 5) as Count, sum(Likes) as Likes from Posts p  where UserId = :Id',array('Id'=> $request->url_elements[2]));
+                    $result['users_posts'] = $query->fetchAll()[0];
+
+                    $query = $db->query('select (count(*) * 2) as book_c, sum(Endorse) as book_e from UsersBook ub where ub.UserId = :Id',array('Id'=> $request->url_elements[2]));
+                    $result['users_books'] = $query->fetchAll()[0];
+
+                    return $result;
                 }
-                elseif(isset($request->url_elements[2] && $request->url_elements[2] == 'me')){
-                    //members/me
-                    $request_headers = apache_request_headers();
-
-                    $me = array();
-                    $query = $db->query('select * from Activity where UserId= :Id',array('Id'=> $request_headers['User-Id']);  
-                    $result = $query->fetchAll();              
-                    $me['Me-activity'] = $result;
-                    $query = $db->query('select * from Activity where UserId IN (select UserId from Follow where FollowerId = :id)',array('id'=>                                   $request_headers['User-Id']);  
+                elseif(isset($request->url_elements[2]) && $request->url_elements[2] == 'me' && $request->url_elements[3] == 'all-activity'){
+                    $query = $db->query('select * from Activity where UserId IN (select UserId from Follow where FollowerId = :id)',array('id'=> $_SESSION['User_Id']));
+                }
+                elseif(isset($request->url_elements[2]) && $request->url_elements[2] == 'me' && $request->url_elements[3] == 'my-activity'){
+                    $query = $db->query('select * from Activity where UserId= :Id',array('Id'=> $_SESSION['User_Id']));
+                }
+                elseif(isset($request->url_elements[2]) && $request->url_elements[2] == 'me' && $request->url_elements[3] == 'group-activity'){
+                    $query = $db->query('select * from Activity where UserId= :Id',array('Id'=> $_SESSION['User_Id']));
+                }
+                elseif(isset($request->url_elements[2]) && $request->url_elements[2] == 'me' && $request->url_elements[3] == 'groups'){
+                    $query = $db->query('select g.Id, g.Name, g.Description (select group_concat(t.Name) From Tags t where t.Id IN
+                    (select TagId From TagsInGroup tg where tg.GroupId = g.Id ) as Tags from Groups g join UsersInGroup ug  on (g.id = ug.GroupId) where ug.UserId = :id)',array('id'=> $_SESSION['User_Id']));
+                }
+                elseif(isset($request->url_elements[2]) && $request->url_elements[2] == 'me' && $request->url_elements[3] == 'books'){
+                    $query = $db->query('select b.Title, b.CoverArt from Books b  where b.Id IN (select ub.BookId from UsersBook ub where ub.UserId = :id)',array('id'=> $_SESSION['User_Id']));
+                }
+                elseif(isset($request->url_elements[2]) && $request->url_elements[2] == 'me' && $request->url_elements[3] == 'writing'){
+                    $query = $db->query('select * from Posts where UserId= :Id',array('Id'=> $_SESSION['User_Id']));
+                }
+                elseif(isset($request->url_elements[2]) && $request->url_elements[2] == 'me' && $request->url_elements[3] == 'profile'){
+                    $query = $db->query('select * from Users where Id= :Id',array('Id'=> $_SESSION['User_Id']));
                     $result = $query->fetchAll();
-                    $me['All-activity'] = $result;
-                    $query = $db->query('select g.Id, g.Name, g.Description (select group_concat(t.Name) From Tags t where t.Id IN 
-                    (select TagId From TagsInGroup tg where tg.GroupId = g.Id ) as Tags from Groups g join UsersInGroup ug  on (g.id = ug.GroupId) where                            ug.UserId = :id)',array('id'=> $request_headers['User-Id']);  
-                    $me['Groups'] = $query->fetchAll();
-                    $query = $db->query('select Name from Users where Id = :id',array('id'=>$request_headers['User-Id']); 
-                    $me['Name'] = $query->fetchAll()[0]['Name'];
-                    $query = $db->query('select b.Title, b.CoverArt from Books b  where b.Id IN (select ub.BookId from UsersBook ub where ub.UserId =                             :id)',array('id'=> $request_headers['User-Id']);
-                    $me['Books'] = $query->fetchAll();                                         
-                    return $me;
-
+                    unset($result[0]['Salt']);
+                    return $result[0];
                 }
-                elseif(isset($request->url_elements[2] && $request->url_elements[2]=='mostactive')){
+
+                elseif(isset($request->url_elements[2]) && $request->url_elements[2]=='newest'){
                     //members/mostactive
-
+                   // $query = $db->query('select u.Id,  ((select count(*) from Posts where UserId = u.Id ) * 5,  ) from Users where Id= :Id',array('Id'=> $_SESSION['User_Id']));
+                    $query = $db->query('select Id,Name from Users order by AddedDate desc limit 10 ');
                 }
-                elseif(isset($request->url_elements[2] && $request->url_elements[2]== 'featured')){
+                elseif(isset($request->url_elements[2]) && $request->url_elements[2]== 'featured'){
                     //members/featured
-
+                    $query = $db->query('select Id,Name from Users where Featured = true ');
                 }
                 elseif(!isset($request->url_elements[2])){
-                    //members?skip=? & take=?
-                    //or
-                    //members/likeyou?books=?&groups=?&interest=?&take=?&skip=?
-
+                    $query = $db->query('select Id,Name from Users');
                 }
                 if(!isset($query))
                 {
@@ -123,18 +143,15 @@ Class MembersController
         $db = DbAccess::getInstance();
         $query = $db->query('select Id, Password, Salt, Name from Users where Email= :email', array('email'=> $parameters['Email']));
         if(!$query->rowCount() > 0 )
-            return;
+            return false;
         $result = $query->fetchAll();
         //$password = hash('SHA256', $parameters['Password']);
         $hashedPassword = hash_hmac('SHA256', $parameters['Password'], $result[0]['Salt']);
         if($hashedPassword !== $result[0]['Password'])
             return;
-        $tokenSalt = bin2hex(rand(5555, 12457897654));
-        $token = hash_hmac('SHA256', $hashedPassword, $tokenSalt);
-
-        $mem = array('token' => $token, 'Name' => $result[0]['Name'], 'Id' => $result[0]['Id']);
-        $_SESSION['token'] = $token;
-        return $mem;
+        $_SESSION['loggedIn'] = true;
+        $_SESSION['User_Id'] = $result[0]['Id'];
+        return true;
     }
 
     function AddAccount($parameters)
@@ -150,17 +167,7 @@ Class MembersController
     }
     function Authenticate()
     {
-        $request_headers = apache_request_headers();
-
-        if ( ! isset($request_headers['Auth-Token'])) {
-            return false;
-        }
-
-        if(!isset($_SESSION['token'])){
-            header('HTTP/1.0 401 Login Required');
-            return false;
-        }
-        return $_SESSION['token'] === $request_headers['Auth-Token'];
+        return isset($_SESSION['loggedIn']) && $_SESSION['loggedIn'] == true;
     }
 
     function ChangePassword($parameters)
