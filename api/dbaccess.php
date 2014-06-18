@@ -3,8 +3,8 @@
 define('DB_HOST', 'localhost');
 define('DB_PORT', '3306');
 define('DB_NAME', 'takada');
-define('DB_USERNAME', 'root');
-define('DB_PASSWORD', '');
+define('DB_USERNAME', 'ogbeks');
+define('DB_PASSWORD', 'samchuks');
 
  class DbAccess {
 	private static $_Instance = null;
